@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { buildDependencyContainer } from "./di/buildDependencyContainer";
 import { program } from "commander";
 import fs from "fs";
