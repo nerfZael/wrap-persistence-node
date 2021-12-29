@@ -13,31 +13,33 @@ require("custom-env").env();
     storage
   } = dependencyContainer.cradle;
 
-  const hash1 = "QmZwKD7C8Ah7qL7xntSL8hujBnxpKwhV594jfFG6SFF61V";
-
   program
-    .command("run-past")
+    .command("past")
+    .description("Run for a past block count")
     .requiredOption("-b, --blocks <number>", "Past block count")
     .action(async (options) => {
       await cacheRunner.runForPastBlocks(Number(options.blocks));
-      await cacheRunner.listenForEvents();
+      process.exit(0);
     });
   
   program
-    .command("run-missed")
+    .command("missed")
+    .description("Run for missed blocks while the app was offline")
     .action(async (options) => {
       await cacheRunner.runForMissedBlocks();
-      await cacheRunner.listenForEvents();
+      process.exit(0);
     });
 
   program
-    .command("run-listen")
+    .command("listen")
+    .description("Listen for events and pin wrappers")
     .action(async (options) => {
       await cacheRunner.listenForEvents();
     });
 
   program
-    .command("process-unresponsive")
+    .command("unresponsive")
+    .description("Process unresponsive IPFS URIs")
     .action(async (options) => {
       await cacheRunner.processUnresponsive();
       process.exit(0);
@@ -45,6 +47,7 @@ require("custom-env").env();
 
   program
     .command("info")
+    .description("Display useful information about the current state (pinned hash count, unresponsive count, etc)")
     .action(async (options) => {
       console.log(`Last block number was ${storage.lastBlockNumber}`);
       console.log(`There are ${Object.keys(storage.ensIpfs).length} pinned ENS domains`);
@@ -55,6 +58,7 @@ require("custom-env").env();
 
   program
     .command("reset")
+    .description("Delete the storage file")
     .action(async (options) => {
       if(fs.existsSync("./storage.json")) {
         fs.rmSync("./storage.json");
