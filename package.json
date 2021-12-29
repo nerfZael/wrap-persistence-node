@@ -1,5 +1,5 @@
 {
-  "name": "wrap-persistence-client",
+  "name": "wrap-persistence-node",
   "version": "0.2.0",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
