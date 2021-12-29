@@ -4,22 +4,21 @@ import { NameAndRegistrationPair } from "awilix";
 import { EthersConfig } from "../config/EthersConfig";
 import { IpfsConfig } from "../config/IpfsConfig";
 import { EnsConfig } from "../config/EnsConfig";
-import * as IPFS from 'ipfs-core'
 import { Storage } from "../types/Storage";
 import { CacheRunner } from "../CacheRunner";
+import { createIpfsNode } from "../createIpfsNode";
 
 export const buildDependencyContainer = async(
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<any>> => {
-  const ipfsNode = await IPFS.create();
+  const ipfsNode = await createIpfsNode();
+
+  const storage = new Storage();
+  await storage.load();
 
   const container = awilix.createContainer({
     injectionMode: awilix.InjectionMode.PROXY,
   });
-
-  const storage = new Storage();
-
-  await storage.load();
 
   container.register({
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
