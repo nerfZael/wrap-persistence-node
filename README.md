@@ -16,10 +16,10 @@ Run with cloning the repo:
 5. Run "yarn dev {command}" to run the commands with ts-node
 
 The following commands are supported:
-- past [options]  Run for a past block count
-- missed          Run for missed blocks while the app was offline
-- listen          Listen for events and pin wrappers
-- unresponsive    Process unresponsive IPFS URIs
-- info            Display useful information about the current state (pinned hash count, unresponsive count, etc)
-- reset           Delete the storage file
-- help [command]  display help for command
+- past:  Run for a past block count
+- missed:          Run for missed blocks while the app was offline
+- listen:          Listen for events and pin wrappers
+- unresponsive:    Process unresponsive IPFS URIs
+- info:            Display useful information about the current state (pinned hash count, unresponsive count, etc)
+- reset:           Delete the storage file
+- help:  display help for command
