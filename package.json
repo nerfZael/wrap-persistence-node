@@ -9,6 +9,9 @@
   "files": [
     "/bin"
   ],
+  "bin": {
+    "wrap-persistence-node": "bin/main.js"
+  },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "dev": "ts-node src/main.ts",
