@@ -10,7 +10,7 @@
     "/bin"
   ],
   "bin": {
-    "wrap-persistence-node": "./main.js"
+    "wrap-persistence-node": "./bin/main.js"
   },
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
