@@ -21,7 +21,9 @@
     "ipfs",
     "persistence",
     "wrap",
-    "ens"
+    "ens",
+    "polywrapper",
+    "wrapper"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
