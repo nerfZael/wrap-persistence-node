@@ -11,6 +11,7 @@ import { IpfsConfig } from "./config/IpfsConfig";
 import express from "express";
 import multer, { memoryStorage } from "multer";
 import { MulterFile } from "./MulterFile";
+import cors from "cors";
 
 interface ICacheRunnerDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -35,13 +36,50 @@ export class CacheRunner {
     const upload = multer({ 
       storage: memoryStorage(),
       limits: {
-        fileSize: 0.5*1024*1024,
+        fileSize: 1*1024*1024,
         files: 7
       }
     });
+
+    app.all('*', function(req, res, next) {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+      if (req.method === 'OPTIONS') {
+        res.send(200);
+      } else {
+        next();
+      }
+    });
+
+    app.get('/api/v0/cat', async (req, res) => {
+      const hash = req.query.arg as string;
+      const stream = await ipfs.cat(hash); 
+
+      let data: Uint8Array = new Uint8Array();
+      
+      for await (const chunk of stream) {
+        const temp = new Uint8Array(data.length + chunk.length);
+        temp.set(data);
+        temp.set(chunk, data.length);
+        data = temp;
+      }
+
+      const buffer = Buffer.from(data);
+
+      res.send(buffer);
+    });
+
+    app.get('/api/v0/resolve', async (req, res) => {
+      const hash = req.query.arg as string;
+      const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`); 
+
+      res.json({
+        path: resolvedPath
+      });
+    });
+
     app.post('/add', upload.fields([ { name: "files"}, { name: "options", maxCount: 1 } ]), async (req, res) => {
-      // req.file is the name of your file in the form above, here 'uploaded_file'
-      // req.body will hold the text fields, if there were any 
       if(!req.files) {
         res.json({
           error: "No files were uploaded"
@@ -54,7 +92,6 @@ export class CacheRunner {
           onlyHash: false,
         };
       
-      await ipfs.repo.gc();
       const files: {files: MulterFile[]} = req.files as {files: MulterFile[]};
 
       let rootCID = "";
@@ -79,9 +116,12 @@ export class CacheRunner {
       });
     });
 
+    app.use(cors({
+      origin: "*",
+    }));
+
     app.listen( port, () => {
-      // tslint:disable-next-line:no-console
-      console.log(`Server started at http://localhost:${ port }` );
+      console.log(`Server started at http://localhost:${port}` );
     });
   }
 
