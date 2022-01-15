@@ -1,5 +1,4 @@
 import { ethers } from "ethers";
-import { Base58 } from "@ethersproject/basex";
 import { getPastContenthashChanges } from "./getPastContenthashChanges";
 import { getIpfsHashFromContenthash } from "./getIpfsHashFromContenthash";
 import { Storage } from "./types/Storage";
@@ -9,6 +8,9 @@ import { pinCid } from "./pinCid";
 import { unpinCid } from "./unpinCid";
 import { toShortString } from "./toShortString";
 import { IpfsConfig } from "./config/IpfsConfig";
+import express from "express";
+import multer, { memoryStorage } from "multer";
+import { MulterFile } from "./MulterFile";
 
 interface ICacheRunnerDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -23,6 +25,64 @@ export class CacheRunner {
 
   constructor(deps: ICacheRunnerDependencies) {
     this.deps = deps;
+  }
+
+  async runApi(port: number) {
+    const app = express();
+    
+    const ipfs = this.deps.ipfsNode;
+
+    const upload = multer({ 
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 0.5*1024*1024,
+        files: 7
+      }
+    });
+    app.post('/add', upload.fields([ { name: "files"}, { name: "options", maxCount: 1 } ]), async (req, res) => {
+      // req.file is the name of your file in the form above, here 'uploaded_file'
+      // req.body will hold the text fields, if there were any 
+      if(!req.files) {
+        res.json({
+          error: "No files were uploaded"
+        });
+      }
+
+      const options = req.body.options 
+        ? JSON.parse(req.body.options)
+        : {
+          onlyHash: false,
+        };
+      
+      await ipfs.repo.gc();
+      const files: {files: MulterFile[]} = req.files as {files: MulterFile[]};
+
+      let rootCID = "";
+      for await (const file of ipfs.addAll(
+        files.files.map(x => ({
+          path: x.originalname,
+          content: x.buffer
+        })),
+        {
+          wrapWithDirectory: true,
+          pin: false,
+          onlyHash: options.onlyHash
+        }
+      )) {
+        if (file.path.indexOf("/") === -1) {
+          rootCID = file.cid.toString();
+        }
+      }
+    
+      res.json({
+        cid: rootCID,
+      });
+    });
+
+    app.listen( port, () => {
+      // tslint:disable-next-line:no-console
+      console.log(`Server started at http://localhost:${ port }` );
+    });
   }
 
   //TODO: runned missed events while updating

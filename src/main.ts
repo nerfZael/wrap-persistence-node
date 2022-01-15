@@ -38,6 +38,14 @@ require("custom-env").env();
     });
 
   program
+    .command("api")
+    .description("Run the API")
+    .requiredOption("-p, --port <number>", "Port number")
+    .action(async (options) => {
+      await cacheRunner.runApi(+options.port);
+    });
+
+  program
     .command("unresponsive")
     .description("Process unresponsive IPFS URIs")
     .action(async (options) => {
