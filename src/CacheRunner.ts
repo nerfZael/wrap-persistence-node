@@ -116,6 +116,12 @@ export class CacheRunner {
       });
     });
 
+    app.get('/status', async (req, res) => {
+      res.json({
+        status: "running"
+      });
+    });
+
     app.use(cors({
       origin: "*",
     }));
