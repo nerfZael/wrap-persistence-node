@@ -41,8 +41,16 @@ require("custom-env").env();
     .command("api")
     .description("Run the API")
     .requiredOption("-p, --port <number>", "Port number")
+    .requiredOption("-l, --listen <number>", "Listen to events")
     .action(async (options) => {
-      await cacheRunner.runApi(+options.port);
+      if(options.listen) {
+        await Promise.all([
+          cacheRunner.runApi(+options.port),
+          cacheRunner.listenForEvents()
+        ]);
+      } else {
+        await cacheRunner.runApi(+options.port);
+      }
     });
 
   program
