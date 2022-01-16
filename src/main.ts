@@ -41,7 +41,7 @@ require("custom-env").env();
     .command("api")
     .description("Run the API")
     .requiredOption("-p, --port <number>", "Port number")
-    .requiredOption("-l, --listen", "Listen to events")
+    .option("-l, --listen", "Listen to events")
     .action(async (options) => {
       if(options.listen) {
         await Promise.all([
