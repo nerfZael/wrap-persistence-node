@@ -10,6 +10,7 @@ require("custom-env").env();
   const dependencyContainer = await buildDependencyContainer();
   const {
     cacheRunner,
+    ipfsGatewayApi,
     storage
   } = dependencyContainer.cradle;
 
@@ -40,16 +41,42 @@ require("custom-env").env();
   program
     .command("api")
     .description("Run the API")
-    .requiredOption("-p, --port <number>", "Port number")
     .option("-l, --listen", "Listen to events")
+    .option("--http <number>", "Http port")
+    .option("--https <number>", "Https port")
+    .option("--ssl <string>", "Directory with SSL certificates")
     .action(async (options) => {
+      if(!options.http && !options.https) {
+        console.error("You must specify either an http or an https port(or both)");
+        process.exit();
+      }
+
+      const httpConfig = options.http 
+        ? {
+            port: Number(options.http),
+          }
+        : undefined;
+      
+      const httpsConfig = options.https
+        ? {
+            port: Number(options.https),
+            sslDir: options.ssl,
+          }
+        : undefined;
+
       if(options.listen) {
         await Promise.all([
-          cacheRunner.runApi(+options.port),
+          ipfsGatewayApi.run(
+            httpConfig, 
+            httpsConfig
+          ),
           cacheRunner.listenForEvents()
         ]);
       } else {
-        await cacheRunner.runApi(+options.port);
+        await ipfsGatewayApi.run(
+          httpConfig, 
+          httpsConfig
+        );
       }
     });
 

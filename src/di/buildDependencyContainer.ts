@@ -5,8 +5,9 @@ import { EthersConfig } from "../config/EthersConfig";
 import { IpfsConfig } from "../config/IpfsConfig";
 import { EnsConfig } from "../config/EnsConfig";
 import { Storage } from "../types/Storage";
-import { CacheRunner } from "../CacheRunner";
+import { CacheRunner } from "../services/CacheRunner";
 import { createIpfsNode } from "../createIpfsNode";
+import { IpfsGatewayApi } from "../services/IpfsGatewayApi";
 
 export const buildDependencyContainer = async(
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
@@ -49,6 +50,7 @@ export const buildDependencyContainer = async(
       })
       .singleton(),
     cacheRunner: awilix.asClass(CacheRunner).singleton(),
+    ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     ...extensionsAndOverrides,
   });
 

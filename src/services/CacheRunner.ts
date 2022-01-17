@@ -1,19 +1,15 @@
 import { ethers } from "ethers";
-import { getPastContenthashChanges } from "./getPastContenthashChanges";
-import { getIpfsHashFromContenthash } from "./getIpfsHashFromContenthash";
-import { Storage } from "./types/Storage";
-import { isWrapper } from "./isWrapper";
+import { getPastContenthashChanges } from "../getPastContenthashChanges";
+import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
+import { Storage } from "../types/Storage";
+import { isWrapper } from "../isWrapper";
 import * as IPFS from 'ipfs-core';
-import { pinCid } from "./pinCid";
-import { unpinCid } from "./unpinCid";
-import { toShortString } from "./toShortString";
-import { IpfsConfig } from "./config/IpfsConfig";
-import express from "express";
-import multer, { memoryStorage } from "multer";
-import { MulterFile } from "./MulterFile";
-import cors from "cors";
+import { pinCid } from "../pinCid";
+import { unpinCid } from "../unpinCid";
+import { toShortString } from "../toShortString";
+import { IpfsConfig } from "../config/IpfsConfig";
 
-interface ICacheRunnerDependencies {
+interface IDependencies {
   ethersProvider: ethers.providers.Provider;
   ensPublicResolver: ethers.Contract;
   storage: Storage;
@@ -22,113 +18,10 @@ interface ICacheRunnerDependencies {
 }
 
 export class CacheRunner {
-  deps: ICacheRunnerDependencies;
+  deps: IDependencies;
 
-  constructor(deps: ICacheRunnerDependencies) {
+  constructor(deps: IDependencies) {
     this.deps = deps;
-  }
-
-  async runApi(port: number) {
-    const app = express();
-    
-    const ipfs = this.deps.ipfsNode;
-
-    const upload = multer({ 
-      storage: memoryStorage(),
-      limits: {
-        fileSize: 1*1024*1024,
-        files: 7
-      }
-    });
-
-    app.all('*', function(req, res, next) {
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-
-      if (req.method === 'OPTIONS') {
-        res.send(200);
-      } else {
-        next();
-      }
-    });
-
-    app.get('/api/v0/cat', async (req, res) => {
-      const hash = req.query.arg as string;
-      const stream = await ipfs.cat(hash); 
-
-      let data: Uint8Array = new Uint8Array();
-      
-      for await (const chunk of stream) {
-        const temp = new Uint8Array(data.length + chunk.length);
-        temp.set(data);
-        temp.set(chunk, data.length);
-        data = temp;
-      }
-
-      const buffer = Buffer.from(data);
-
-      res.send(buffer);
-    });
-
-    app.get('/api/v0/resolve', async (req, res) => {
-      const hash = req.query.arg as string;
-      const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`); 
-
-      res.json({
-        path: resolvedPath
-      });
-    });
-
-    app.post('/add', upload.fields([ { name: "files"}, { name: "options", maxCount: 1 } ]), async (req, res) => {
-      if(!req.files) {
-        res.json({
-          error: "No files were uploaded"
-        });
-      }
-
-      const options = req.body.options 
-        ? JSON.parse(req.body.options)
-        : {
-          onlyHash: false,
-        };
-      
-      const files: {files: MulterFile[]} = req.files as {files: MulterFile[]};
-
-      let rootCID = "";
-      for await (const file of ipfs.addAll(
-        files.files.map(x => ({
-          path: x.originalname,
-          content: x.buffer
-        })),
-        {
-          wrapWithDirectory: true,
-          pin: false,
-          onlyHash: options.onlyHash
-        }
-      )) {
-        if (file.path.indexOf("/") === -1) {
-          rootCID = file.cid.toString();
-        }
-      }
-    
-      res.json({
-        cid: rootCID,
-      });
-    });
-
-    app.get('/status', async (req, res) => {
-      res.json({
-        status: "running"
-      });
-    });
-
-    app.use(cors({
-      origin: "*",
-    }));
-
-    app.listen( port, () => {
-      console.log(`Server started at http://localhost:${port}` );
-    });
   }
 
   //TODO: runned missed events while updating
