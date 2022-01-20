@@ -8,6 +8,7 @@ import { pinCid } from "../pinCid";
 import { unpinCid } from "../unpinCid";
 import { toShortString } from "../toShortString";
 import { IpfsConfig } from "../config/IpfsConfig";
+import { LoggerConfig } from "../config/LoggerConfig";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -15,6 +16,7 @@ interface IDependencies {
   storage: Storage;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
+  loggerConfig: LoggerConfig;
 }
 
 export class CacheRunner {
@@ -29,28 +31,30 @@ export class CacheRunner {
     const latestBlock = await this.deps.ethersProvider.getBlockNumber();
 
     if(blockCnt !== 0) {
-      console.log("Processing past blocks...");
+      this.deps.loggerConfig.shouldLog && console.log("Processing past blocks...");
 
       await this.processPastBlocks(latestBlock - blockCnt);
     }
   }
 
   async runForMissedBlocks() {
-    console.log("Processing missed blocks...");
+    this.deps.loggerConfig.shouldLog && console.log("Processing missed blocks...");
   
     await this.processPastBlocks(this.deps.storage.lastBlockNumber);
   }
 
   async listenForEvents() {
-    console.log("Listening for events...");
+    const shouldLog = this.deps.loggerConfig.shouldLog;
+
+    shouldLog && console.log("Listening for events...");
   
     this.deps.ensPublicResolver.on("ContenthashChanged", async (ensNode: string, contenthash: string, event: any) => {
-      console.log("----------------------------------------------");
+      shouldLog && console.log("----------------------------------------------");
       await this.processEnsIpfs(ensNode, getIpfsHashFromContenthash(contenthash));
 
       this.deps.storage.lastBlockNumber = event.blockNumber - 1;
       await this.deps.storage.save();
-      console.log("----------------------------------------------");
+      shouldLog && console.log("----------------------------------------------");
     });
   }
 
@@ -68,7 +72,9 @@ export class CacheRunner {
   }
 
   async processUnresponsive() {
-    console.log("Processing unresponsive packages...");
+    const shouldLog = this.deps.loggerConfig.shouldLog;
+   
+    shouldLog && console.log("Processing unresponsive packages...");
     
     const ensNodes = Object.keys(this.deps.storage.unresponsiveEnsNodes);
     this.deps.storage.unresponsiveEnsNodes = {};
@@ -77,6 +83,8 @@ export class CacheRunner {
   }
 
   async processEnsIpfs(ensNode: string, ipfsHash: string | undefined): Promise<boolean> {
+    const shouldLog = this.deps.loggerConfig.shouldLog;
+   
     const ensIpfsCache = this.deps.storage.ensIpfs;
     const ipfsEnsCache = this.deps.storage.ipfsEns;
 
@@ -84,8 +92,8 @@ export class CacheRunner {
       const savedIpfsHash = ensIpfsCache[ensNode];
 
       if(savedIpfsHash) {
-        console.log("ENS no longer points to an IPFS hash");
-        console.log("Unpinning...");
+        shouldLog && console.log("ENS no longer points to an IPFS hash");
+        shouldLog && console.log("Unpinning...");
 
         const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, savedIpfsHash);
         
@@ -97,42 +105,42 @@ export class CacheRunner {
 
           delete ensIpfsCache[ensNode];
 
-          console.log("Unpinned successfully");
+          shouldLog && console.log("Unpinned successfully");
         } else {
-          console.log("Unpinning failed");
+          shouldLog && console.log("Unpinning failed");
         }
       } else {
-        console.log("Nothing changed");
+        shouldLog && console.log("Nothing changed");
       }
 
       return false;
     }
 
     if(Object.keys(this.deps.storage.unresponsiveEnsNodes).includes(ensNode)) {
-      console.log(`Ens domain already included in unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
+      shouldLog && console.log(`Ens domain already included in unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
       return false;
     }
 
     if(!ipfsEnsCache[ipfsHash]) {
-      console.log(`Checking if ${ipfsHash} is a wrapper`);
+      shouldLog && console.log(`Checking if ${ipfsHash} is a wrapper`);
 
       const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);
 
       if(resp === "no") {
-        console.log("IPFS hash is not a valid wrapper");
+        shouldLog && console.log("IPFS hash is not a valid wrapper");
         return false;
       } else if(resp === "timeout") {
         this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
-        console.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
+        shouldLog && console.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return false;
       }
 
       const success = await pinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);  
 
       if(!success) {
-        console.log("Pinning failed");
+        shouldLog && console.log("Pinning failed");
         this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
-        console.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
+        shouldLog && console.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return false;
       }
 
@@ -141,52 +149,54 @@ export class CacheRunner {
 
       return true;
     } else {
-      console.log(`${ipfsHash} is already pinned`);
+      shouldLog && console.log(`${ipfsHash} is already pinned`);
       return false;
     }
   }
 
   async processEnsNodes(nodes: string[]) {
+    const shouldLog = this.deps.loggerConfig.shouldLog;
+   
     const ensNodes = [...new Set(nodes)];
 
-    console.log(`Found ${ensNodes.length} eligible ENS domains`);
+    shouldLog && console.log(`Found ${ensNodes.length} eligible ENS domains`);
 
     if(!ensNodes.length) {
       return;
     }
 
-    console.log(`Pinning...`);
+    shouldLog && console.log(`Pinning...`);
     let pinnedCnt = 0;
 
     for(let i = 0; i < ensNodes.length; i++) {
       const ensNode = ensNodes[i];
 
-      console.log("----------------------------------------------");
-      console.log(`Retrieving contenthash for ${toShortString(ensNode)} (${i+1}/${ensNodes.length})`);
+      shouldLog && console.log("----------------------------------------------");
+      shouldLog && console.log(`Retrieving contenthash for ${toShortString(ensNode)} (${i+1}/${ensNodes.length})`);
       
       try {
         const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
         const ipfsHash = getIpfsHashFromContenthash(contenthash);
   
-        console.log("Retrieved IPFS hash for ENS domain");
+        shouldLog && console.log("Retrieved IPFS hash for ENS domain");
         const newlyPinned = await this.processEnsIpfs(ensNode, ipfsHash);
 
         if(newlyPinned) {
           pinnedCnt++;
         }
       } catch(ex) {
-        console.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
-        console.log("Error retrieving contenthash");
-        console.log(ex);
+        shouldLog && console.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
+        shouldLog && console.log("Error retrieving contenthash");
+        shouldLog && console.log(ex);
       }
       await this.deps.storage.save();
-      console.log(`${pinnedCnt} newly pinned nodes`);
-      console.log("----------------------------------------------");
+      shouldLog && console.log(`${pinnedCnt} newly pinned nodes`);
+      shouldLog && console.log("----------------------------------------------");
     }
 
-    console.log(`Finished processing ${ensNodes.length} ENS domains`);
-    console.log(`${Object.keys(this.deps.storage.ipfsEns).length} pinned IPFS hashes`);
+    shouldLog && console.log(`Finished processing ${ensNodes.length} ENS domains`);
+    shouldLog && console.log(`${Object.keys(this.deps.storage.ipfsEns).length} pinned IPFS hashes`);
 
-    console.log(`${Object.keys(this.deps.storage.unresponsiveEnsNodes).length} unresponsive domains/ipfs hashes`);
+    shouldLog && console.log(`${Object.keys(this.deps.storage.unresponsiveEnsNodes).length} unresponsive domains/ipfs hashes`);
   }
 }

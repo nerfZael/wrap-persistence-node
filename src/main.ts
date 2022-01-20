@@ -11,14 +11,20 @@ require("custom-env").env();
   const {
     cacheRunner,
     ipfsGatewayApi,
-    storage
+    storage,
+    loggerConfig
   } = dependencyContainer.cradle;
 
   program
     .command("past")
     .description("Run for a past block count")
     .requiredOption("-b, --blocks <number>", "Past block count")
+    .option("--log", "Enable logging")
     .action(async (options) => {
+      if(!!options.log) {
+        loggerConfig.shouldLog = true;
+      }
+      
       await cacheRunner.runForPastBlocks(Number(options.blocks));
       process.exit(0);
     });
@@ -26,7 +32,12 @@ require("custom-env").env();
   program
     .command("missed")
     .description("Run for missed blocks while the app was offline")
+    .option("--log", "Enable logging")
     .action(async (options) => {
+      if(!!options.log) {
+        loggerConfig.shouldLog = true;
+      }
+      
       await cacheRunner.runForMissedBlocks();
       process.exit(0);
     });
@@ -34,7 +45,12 @@ require("custom-env").env();
   program
     .command("listen")
     .description("Listen for events and pin wrappers")
+    .option("--log", "Enable logging")
     .action(async (options) => {
+      if(!!options.log) {
+        loggerConfig.shouldLog = true;
+      }
+      
       await cacheRunner.listenForEvents();
     });
 
@@ -45,7 +61,12 @@ require("custom-env").env();
     .option("--http <number>", "Http port")
     .option("--https <number>", "Https port")
     .option("--ssl <string>", "Directory with SSL certificates")
+    .option("--log", "Enable logging")
     .action(async (options) => {
+      if(!!options.log) {
+        loggerConfig.shouldLog = true;
+      }
+
       if(!options.http && !options.https) {
         console.error("You must specify either an http or an https port(or both)");
         process.exit();
@@ -83,7 +104,12 @@ require("custom-env").env();
   program
     .command("unresponsive")
     .description("Process unresponsive IPFS URIs")
+    .option("--log", "Enable logging")
     .action(async (options) => {
+      if(!!options.log) {
+        loggerConfig.shouldLog = true;
+      }
+
       await cacheRunner.processUnresponsive();
       process.exit(0);
     });

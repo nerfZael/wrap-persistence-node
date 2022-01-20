@@ -8,6 +8,7 @@ import { Storage } from "../types/Storage";
 import { CacheRunner } from "../services/CacheRunner";
 import { createIpfsNode } from "../createIpfsNode";
 import { IpfsGatewayApi } from "../services/IpfsGatewayApi";
+import { LoggerConfig } from "../config/LoggerConfig";
 
 export const buildDependencyContainer = async(
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
@@ -25,6 +26,7 @@ export const buildDependencyContainer = async(
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
     ethersConfig: awilix.asClass(EthersConfig).singleton(),
     ensConfig: awilix.asClass(EnsConfig).singleton(),
+    loggerConfig: awilix.asClass(LoggerConfig).singleton(),
     ethersProvider: awilix
       .asFunction(({ ethersConfig }) => {
         return ethers.providers.getDefaultProvider(

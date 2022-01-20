@@ -9,6 +9,7 @@ import { HttpConfig } from "../api-server/HttpConfig";
 import { HttpsConfig } from "../api-server/HttpsConfig";
 import { runServer } from "../api-server/runServer";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
+import { LoggerConfig } from "../config/LoggerConfig";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -16,6 +17,7 @@ interface IDependencies {
   storage: Storage;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
+  loggerConfig: LoggerConfig;
 }
 
 export class IpfsGatewayApi {
@@ -29,10 +31,10 @@ export class IpfsGatewayApi {
     httpConfig: HttpConfig,
     httpsConfig: HttpsConfig
   ) {
-
-    const app = express();
-    
     const ipfs = this.deps.ipfsNode;
+    const shouldLog = this.deps.loggerConfig.shouldLog;
+ 
+    const app = express();
 
     const upload = multer({ 
       storage: memoryStorage(),
@@ -49,12 +51,14 @@ export class IpfsGatewayApi {
       if (req.method === 'OPTIONS') {
         res.send(200);
       } else {
+        shouldLog && console.log("New request: " + req.method + " " + req.url);
         next();
       }
     });
 
     app.get('/api/v0/cat', async (req, res) => {
       const hash = req.query.arg as string;
+
       const stream = ipfs.cat(hash); 
 
       let data: Uint8Array = new Uint8Array();
@@ -73,6 +77,7 @@ export class IpfsGatewayApi {
 
     app.get('/api/v0/resolve', async (req, res) => {
       const hash = req.query.arg as string;
+
       const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`); 
 
       res.json({
@@ -103,6 +108,8 @@ export class IpfsGatewayApi {
         { onlyHash: options.onlyHash },
         ipfs
       );
+
+      shouldLog && console.log(`Gateway add: ${cid}`);
       
       res.json({
         cid,
