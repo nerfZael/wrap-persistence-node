@@ -109,7 +109,11 @@ export class IpfsGatewayApi {
       });
     });
 
-    app.get('/status', async (req, res) => {
+    app.get("/", async (req, res) => {
+      res.send("Status: running");
+    });
+
+    app.get("/status", async (req, res) => {
       res.json({
         status: "running"
       });
