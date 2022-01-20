@@ -1,6 +1,6 @@
 {
   "name": "@nerfzael/wrap-persistence-node",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
