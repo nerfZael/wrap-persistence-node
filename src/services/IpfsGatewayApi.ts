@@ -9,7 +9,7 @@ import { HttpConfig } from "../api-server/HttpConfig";
 import { HttpsConfig } from "../api-server/HttpsConfig";
 import { runServer } from "../api-server/runServer";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
-import { LoggerConfig } from "../config/LoggerConfig";
+import { Logger } from "./Logger";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -17,7 +17,7 @@ interface IDependencies {
   storage: Storage;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
-  loggerConfig: LoggerConfig;
+  logger: Logger;
 }
 
 export class IpfsGatewayApi {
@@ -32,7 +32,6 @@ export class IpfsGatewayApi {
     httpsConfig: HttpsConfig
   ) {
     const ipfs = this.deps.ipfsNode;
-    const shouldLog = this.deps.loggerConfig.shouldLog;
  
     const app = express();
 
@@ -44,14 +43,14 @@ export class IpfsGatewayApi {
       }
     });
 
-    app.all('*', function(req, res, next) {
+    app.all('*', (req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
 
       if (req.method === 'OPTIONS') {
         res.send(200);
       } else {
-        shouldLog && console.log("New request: " + req.method + " " + req.url);
+        this.deps.logger.log("Request: " + req.method + " " + req.url);
         next();
       }
     });
@@ -109,7 +108,7 @@ export class IpfsGatewayApi {
         ipfs
       );
 
-      shouldLog && console.log(`Gateway add: ${cid}`);
+      this.deps.logger.log(`Gateway add: ${cid}`);
       
       res.json({
         cid,
