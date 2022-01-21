@@ -47,6 +47,13 @@ export class IpfsGatewayApi {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
 
+      //Trim and redirect multiple slashes in URL
+      if(req.url.match(/[/]{2,}/g)) {
+        req.url = req.url.replace(/[/]+/g, '/');
+        res.redirect(req.url);
+        return;
+      } 
+
       if (req.method === 'OPTIONS') {
         res.send(200);
       } else {
